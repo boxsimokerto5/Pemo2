@@ -1,0 +1,6 @@
+{
+  "name": "SIPEMO",
+  "description": "Sistem Peminjaman Mobil Sekolah Rakyat dengan approval akun admin dan pendaftaran user.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

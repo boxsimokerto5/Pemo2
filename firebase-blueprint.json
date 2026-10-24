@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "User": {
+      "collection": "users",
+      "fields": {
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "unitKerja": { "type": "string" },
+        "jabatan": { "type": "string" },
+        "status": { "type": "string" },
+        "role": { "type": "string" },
+        "approvedBy": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
+      }
+    },
+    "Car": {
+      "collection": "cars",
+      "fields": {
+        "name": { "type": "string" },
+        "plateNumber": { "type": "string" },
+        "capacity": { "type": "number" },
+        "status": { "type": "string" },
+        "transmission": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      }
+    },
+    "Loan": {
+      "collection": "loans",
+      "fields": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userJabatan": { "type": "string" },
+        "carId": { "type": "string" },
+        "carName": { "type": "string" },
+        "purpose": { "type": "string" },
+        "destination": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "driverType": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
+      }
+    }
+  }
+}
