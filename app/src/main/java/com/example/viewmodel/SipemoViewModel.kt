@@ -15,13 +15,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 enum class AppScreen {
     LOGIN,
     REGISTER,
     PENDING_APPROVAL,
     ADMIN_DASHBOARD,
-    USER_DASHBOARD
+    USER_DASHBOARD,
+    SECURITY_DASHBOARD
 }
 
 data class SipemoUiState(
@@ -29,10 +33,13 @@ data class SipemoUiState(
     val currentUser: UserProfile? = null,
     val pendingVerificationUser: UserProfile? = null,
     val isAdmin: Boolean = false,
+    val isSecurity: Boolean = false,
+    val securityOfficerName: String = "Petugas Keamanan (Pos Gerbang)",
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val successMessage: String? = null,
     val adminSelectedTab: Int = 0,
+    val securitySelectedTab: Int = 0, // 0: Izin Gerbang, 1: Live Map Pemantauan
     val userFilterStatus: String = "ALL", // ALL, PENDING, APPROVED, REJECTED
     val userFilterJabatan: String = "ALL",
     val searchQuery: String = "",
@@ -85,14 +92,32 @@ class SipemoViewModel(application: Application) : AndroidViewModel(application) 
         _uiState.update { it.copy(currentScreen = screen, errorMessage = null, successMessage = null) }
     }
 
-    fun loginAdmin(user: String, pass: String) {
-        val trimmedUser = user.trim()
+    /**
+     * Unified Login for Users and Admin:
+     * Admin can log in using admin / Woyowoyo12@ or registered admin credentials.
+     * Regular users log in using their email/username and chosen password.
+     */
+    fun loginUnified(identifier: String, pass: String) {
+        val trimmedUser = identifier.trim()
         val trimmedPass = pass.trim()
 
-        if (trimmedUser == SipemoConstants.ADMIN_USERNAME && trimmedPass == SipemoConstants.ADMIN_PASSWORD) {
+        if (trimmedUser.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Silakan masukkan nama lengkap / email terdaftar.") }
+            return
+        }
+        if (trimmedPass.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Silakan masukkan kata sandi Anda.") }
+            return
+        }
+
+        // 1. Direct match with master Admin credentials
+        if (trimmedUser.equals(SipemoConstants.ADMIN_USERNAME, ignoreCase = true) &&
+            trimmedPass == SipemoConstants.ADMIN_PASSWORD
+        ) {
             _uiState.update {
                 it.copy(
                     isAdmin = true,
+                    isSecurity = false,
                     currentUser = UserProfile(
                         id = "admin_root",
                         fullName = "Administrator Sekolah Rakyat",
@@ -104,25 +129,16 @@ class SipemoViewModel(application: Application) : AndroidViewModel(application) 
                     ),
                     currentScreen = AppScreen.ADMIN_DASHBOARD,
                     errorMessage = null,
-                    successMessage = "Selamat datang, Administrator!"
+                    successMessage = "Selamat datang, Administrator Sekolah Rakyat!"
                 )
             }
-        } else {
-            _uiState.update {
-                it.copy(errorMessage = "Kredensial Admin salah! Gunakan user: admin dan password: Woyowoyo12@")
-            }
-        }
-    }
-
-    fun loginUser(identifier: String) {
-        if (identifier.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Silakan masukkan nama lengkap atau email terdaftar") }
             return
         }
 
+        // 2. Database / In-Memory User Check
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            val user = repository.checkUserStatus(identifier)
+            val user = repository.checkUserStatus(trimmedUser)
             _uiState.update { it.copy(isLoading = false) }
 
             if (user == null) {
@@ -130,6 +146,14 @@ class SipemoViewModel(application: Application) : AndroidViewModel(application) 
                     it.copy(errorMessage = "Akun tidak ditemukan. Silakan lakukan pendaftaran akun terlebih dahulu.")
                 }
             } else {
+                // Check password match (if user has set a password)
+                if (user.password.isNotBlank() && user.password != trimmedPass) {
+                    _uiState.update {
+                        it.copy(errorMessage = "Kata sandi salah! Silakan periksa kembali kata sandi Anda.")
+                    }
+                    return@launch
+                }
+
                 when (user.status) {
                     SipemoConstants.STATUS_PENDING -> {
                         _uiState.update {
@@ -140,13 +164,26 @@ class SipemoViewModel(application: Application) : AndroidViewModel(application) 
                         }
                     }
                     SipemoConstants.STATUS_APPROVED -> {
-                        _uiState.update {
-                            it.copy(
-                                currentUser = user,
-                                isAdmin = false,
-                                currentScreen = AppScreen.USER_DASHBOARD,
-                                successMessage = "Selamat datang, ${user.fullName}!"
-                            )
+                        if (user.role == SipemoConstants.ROLE_ADMIN) {
+                            _uiState.update {
+                                it.copy(
+                                    currentUser = user,
+                                    isAdmin = true,
+                                    isSecurity = false,
+                                    currentScreen = AppScreen.ADMIN_DASHBOARD,
+                                    successMessage = "Selamat datang, ${user.fullName} (Administrator)!"
+                                )
+                            }
+                        } else {
+                            _uiState.update {
+                                it.copy(
+                                    currentUser = user,
+                                    isAdmin = false,
+                                    isSecurity = false,
+                                    currentScreen = AppScreen.USER_DASHBOARD,
+                                    successMessage = "Selamat datang, ${user.fullName}!"
+                                )
+                            }
                         }
                     }
                     SipemoConstants.STATUS_REJECTED -> {
@@ -161,19 +198,73 @@ class SipemoViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /**
+     * Dedicated Security Login (Petugas Keamanan / Pengamanan Dalam)
+     */
+    fun loginSecurity(username: String, pass: String) {
+        val trimmedUser = username.trim()
+        val trimmedPass = pass.trim()
+
+        if (trimmedUser.isBlank() || trimmedPass.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Username dan Kata Sandi Keamanan wajib diisi.") }
+            return
+        }
+
+        if (trimmedUser.equals(SipemoConstants.SECURITY_USERNAME, ignoreCase = true) &&
+            trimmedPass == SipemoConstants.SECURITY_PASSWORD
+        ) {
+            _uiState.update {
+                it.copy(
+                    isSecurity = true,
+                    isAdmin = false,
+                    currentUser = UserProfile(
+                        id = "sec_officer_1",
+                        fullName = "Bripka Agus Sulistyo",
+                        email = "keamanan@sekolahrakyat.sch.id",
+                        unitKerja = "SRT 1 KABUPATEN KEDIRI",
+                        jabatan = "Pengamanan Dalam",
+                        status = SipemoConstants.STATUS_APPROVED,
+                        role = SipemoConstants.ROLE_SECURITY
+                    ),
+                    securityOfficerName = "Bripka Agus (Pos Gerbang)",
+                    currentScreen = AppScreen.SECURITY_DASHBOARD,
+                    errorMessage = null,
+                    successMessage = "Selamat bertugas, Petugas Keamanan! Siap memantau pergerakan mobil."
+                )
+            }
+        } else {
+            _uiState.update {
+                it.copy(errorMessage = "Kredensial Keamanan salah! Gunakan user: keamanan dan password: SatpamSRT123@")
+            }
+        }
+    }
+
+    fun loginAdmin(user: String, pass: String) {
+        loginUnified(user, pass)
+    }
+
+    fun loginUser(identifier: String) {
+        loginUnified(identifier, "User123@")
+    }
+
     fun registerUser(
         fullName: String,
         email: String,
         phone: String,
         unitKerja: String,
-        jabatan: String
+        jabatan: String,
+        password: String = "User123@"
     ) {
         if (fullName.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Nama lengkap wajib diisi") }
+            _uiState.update { it.copy(errorMessage = "Nama lengkap wajib diisi.") }
             return
         }
         if (email.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Email / username wajib diisi") }
+            _uiState.update { it.copy(errorMessage = "Email / username wajib diisi.") }
+            return
+        }
+        if (password.length < 6) {
+            _uiState.update { it.copy(errorMessage = "Kata sandi minimal 6 karakter.") }
             return
         }
 
@@ -185,6 +276,7 @@ class SipemoViewModel(application: Application) : AndroidViewModel(application) 
                 phone = phone.trim(),
                 unitKerja = unitKerja,
                 jabatan = jabatan,
+                password = password.trim(),
                 status = SipemoConstants.STATUS_PENDING,
                 role = SipemoConstants.ROLE_USER
             )
@@ -240,6 +332,10 @@ class SipemoViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setAdminTab(tabIndex: Int) {
         _uiState.update { it.copy(adminSelectedTab = tabIndex) }
+    }
+
+    fun setSecurityTab(tabIndex: Int) {
+        _uiState.update { it.copy(securitySelectedTab = tabIndex) }
     }
 
     fun setUserFilterStatus(status: String) {
@@ -309,6 +405,33 @@ class SipemoViewModel(application: Application) : AndroidViewModel(application) 
                 }
             } else {
                 _uiState.update { it.copy(errorMessage = "Gagal mengajukan peminjaman: ${result.exceptionOrNull()?.message}") }
+            }
+        }
+    }
+
+    // Security Gate Approval Actions
+    fun approveGateDeparture(loanId: String, carName: String) {
+        val timeNow = SimpleDateFormat("HH:mm 'WIB'", Locale.getDefault()).format(Date())
+        val officer = _uiState.value.securityOfficerName
+        viewModelScope.launch {
+            val res = repository.approveGateDeparture(loanId, officer, timeNow)
+            if (res.isSuccess) {
+                _uiState.update {
+                    it.copy(successMessage = "Izin keluar gerbang untuk mobil $carName telah disetujui pada pukul $timeNow.")
+                }
+            }
+        }
+    }
+
+    fun confirmGateReturn(loanId: String, carName: String) {
+        val timeNow = SimpleDateFormat("HH:mm 'WIB'", Locale.getDefault()).format(Date())
+        val officer = _uiState.value.securityOfficerName
+        viewModelScope.launch {
+            val res = repository.confirmGateReturn(loanId, officer, timeNow)
+            if (res.isSuccess) {
+                _uiState.update {
+                    it.copy(successMessage = "Mobil $carName telah dikonfirmasi kembali dan parkir di gerbang/asrama pada $timeNow.")
+                }
             }
         }
     }

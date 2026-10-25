@@ -1,6 +1,5 @@
 package com.example.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,11 +20,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -33,7 +33,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -42,7 +41,6 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -56,7 +54,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -64,7 +61,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.R
 import com.example.model.SipemoConstants
 import com.example.ui.theme.SipemoAmber
 import com.example.ui.theme.SipemoEmerald
@@ -83,15 +79,18 @@ fun LoginScreen(
     viewModel: SipemoViewModel,
     modifier: Modifier = Modifier
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: User, 1: Admin
+    // 0: Pengguna & Admin (Unified Login), 1: Keamanan (Security Gate Login)
+    var selectedTab by remember { mutableIntStateOf(0) }
 
-    // User Form
-    var userIdentifier by remember { mutableStateOf("") }
+    // Unified Form (User & Admin)
+    var userIdentifier by remember { mutableStateOf("budi@sekolahrakyat.sch.id") }
+    var userPassword by remember { mutableStateOf("User123@") }
+    var isUserPasswordVisible by remember { mutableStateOf(false) }
 
-    // Admin Form
-    var adminUser by remember { mutableStateOf("admin") }
-    var adminPass by remember { mutableStateOf("Woyowoyo12@") }
-    var isPasswordVisible by remember { mutableStateOf(false) }
+    // Security Form
+    var securityUser by remember { mutableStateOf(SipemoConstants.SECURITY_USERNAME) }
+    var securityPass by remember { mutableStateOf(SipemoConstants.SECURITY_PASSWORD) }
+    var isSecurityPasswordVisible by remember { mutableStateOf(false) }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -104,7 +103,7 @@ fun LoginScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             // App Emblem & Branding
             Box(
@@ -148,7 +147,7 @@ fun LoginScreen(
                 color = Color(0xFF94A3B8)
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Error or Success Banner
             state.errorMessage?.let { errorMsg ->
@@ -191,7 +190,7 @@ fun LoginScreen(
                 }
             }
 
-            // Tab Switcher (Masuk Pengguna vs Masuk Admin)
+            // Tab Switcher (Masuk Pengguna & Admin vs Masuk KEAMANAN)
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -208,16 +207,19 @@ fun LoginScreen(
                         indicator = { tabPositions ->
                             TabRowDefaults.SecondaryIndicator(
                                 Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                                color = SipemoEmerald
+                                color = if (selectedTab == 0) SipemoEmerald else SipemoAmber
                             )
                         }
                     ) {
                         Tab(
                             selected = selectedTab == 0,
-                            onClick = { selectedTab = 0 },
+                            onClick = {
+                                selectedTab = 0
+                                viewModel.dismissMessage()
+                            },
                             text = {
                                 Text(
-                                    "Masuk Pengguna",
+                                    "Pengguna & Admin",
                                     fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
                                     fontSize = 13.sp,
                                     color = if (selectedTab == 0) SipemoEmerald else Color(0xFF94A3B8)
@@ -226,18 +228,21 @@ fun LoginScreen(
                         )
                         Tab(
                             selected = selectedTab == 1,
-                            onClick = { selectedTab = 1 },
+                            onClick = {
+                                selectedTab = 1
+                                viewModel.dismissMessage()
+                            },
                             text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        imageVector = Icons.Default.AdminPanelSettings,
+                                        imageVector = Icons.Default.Shield,
                                         contentDescription = null,
                                         modifier = Modifier.size(16.dp),
                                         tint = if (selectedTab == 1) SipemoAmber else Color(0xFF94A3B8)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        "Masuk Admin",
+                                        "KEAMANAN",
                                         fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
                                         fontSize = 13.sp,
                                         color = if (selectedTab == 1) SipemoAmber else Color(0xFF94A3B8)
@@ -250,15 +255,15 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(20.dp))
 
                     if (selectedTab == 0) {
-                        // --- FORM USER ---
+                        // --- FORM UNIFIED LOGIN (PENGGUNA & ADMIN) ---
                         Text(
-                            text = "Login Pengguna Terdaftar",
+                            text = "Masuk Pengguna & Admin",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Text(
-                            text = "Masukkan Nama Lengkap atau Email yang telah disetujui",
+                            text = "Gunakan nama/email & kata sandi akun Anda (Admin: admin)",
                             fontSize = 12.sp,
                             color = Color(0xFF94A3B8)
                         )
@@ -268,8 +273,8 @@ fun LoginScreen(
                         OutlinedTextField(
                             value = userIdentifier,
                             onValueChange = { userIdentifier = it },
-                            label = { Text("Nama Lengkap / Email") },
-                            placeholder = { Text("Contoh: Ahmad Santoso") },
+                            label = { Text("Nama Lengkap / Email / Username") },
+                            placeholder = { Text("Contoh: budi@sekolahrakyat.sch.id") },
                             leadingIcon = {
                                 Icon(Icons.Default.Person, contentDescription = null, tint = SipemoEmerald)
                             },
@@ -287,11 +292,71 @@ fun LoginScreen(
                                 .testTag("login_user_input")
                         )
 
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = userPassword,
+                            onValueChange = { userPassword = it },
+                            label = { Text("Kata Sandi (Password)") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = SipemoEmerald)
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { isUserPasswordVisible = !isUserPasswordVisible }) {
+                                    Icon(
+                                        imageVector = if (isUserPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = null,
+                                        tint = Color(0xFF94A3B8)
+                                    )
+                                }
+                            },
+                            visualTransformation = if (isUserPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = SipemoEmerald,
+                                unfocusedBorderColor = SipemoNavyBorder,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedLabelColor = SipemoEmerald
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("login_user_password_input")
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Quick info / autofill hint for testing both user and admin
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(SipemoEmerald.copy(alpha = 0.08f))
+                                .padding(8.dp)
+                        ) {
+                            Column {
+                                Text(
+                                    text = "💡 Akun Demo Tersedia:",
+                                    fontSize = 11.sp,
+                                    color = SipemoEmerald,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "• Admin: admin / Woyowoyo12@\n• Guru: budi@sekolahrakyat.sch.id / User123@",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFCBD5E1),
+                                    lineHeight = 15.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
 
                         Button(
-                            onClick = { viewModel.loginUser(userIdentifier) },
-                            enabled = !state.isLoading && userIdentifier.isNotBlank(),
+                            onClick = { viewModel.loginUnified(userIdentifier, userPassword) },
+                            enabled = !state.isLoading && userIdentifier.isNotBlank() && userPassword.isNotBlank(),
                             colors = ButtonDefaults.buttonColors(containerColor = SipemoEmerald),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
@@ -330,15 +395,15 @@ fun LoginScreen(
                         }
 
                     } else {
-                        // --- FORM ADMIN ---
+                        // --- FORM KEAMANAN (SECURITY) ---
                         Text(
-                            text = "Login Administrator Sekolah Rakyat",
+                            text = "Login Pos Pengamanan Dalam (Satpam)",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Text(
-                            text = "Akses panel persetujuan akun & manajemen peminjaman",
+                            text = "Persetujuan keluar gerbang Sekolah Rakyat & pantau rute via Live Map",
                             fontSize = 12.sp,
                             color = Color(0xFF94A3B8)
                         )
@@ -346,11 +411,11 @@ fun LoginScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         OutlinedTextField(
-                            value = adminUser,
-                            onValueChange = { adminUser = it },
-                            label = { Text("Username Admin") },
+                            value = securityUser,
+                            onValueChange = { securityUser = it },
+                            label = { Text("Username Keamanan") },
                             leadingIcon = {
-                                Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = SipemoAmber)
+                                Icon(Icons.Default.Security, contentDescription = null, tint = SipemoAmber)
                             },
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
@@ -363,28 +428,28 @@ fun LoginScreen(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testTag("admin_username_input")
+                                .testTag("security_username_input")
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))
 
                         OutlinedTextField(
-                            value = adminPass,
-                            onValueChange = { adminPass = it },
-                            label = { Text("Password Admin") },
+                            value = securityPass,
+                            onValueChange = { securityPass = it },
+                            label = { Text("Kata Sandi Keamanan") },
                             leadingIcon = {
                                 Icon(Icons.Default.Lock, contentDescription = null, tint = SipemoAmber)
                             },
                             trailingIcon = {
-                                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                IconButton(onClick = { isSecurityPasswordVisible = !isSecurityPasswordVisible }) {
                                     Icon(
-                                        imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        imageVector = if (isSecurityPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                         contentDescription = null,
                                         tint = Color(0xFF94A3B8)
                                     )
                                 }
                             },
-                            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            visualTransformation = if (isSecurityPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
@@ -397,12 +462,12 @@ fun LoginScreen(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testTag("admin_password_input")
+                                .testTag("security_password_input")
                         )
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                        // Quick info / autofill hint
+                        // Quick info / autofill hint for security
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -411,7 +476,7 @@ fun LoginScreen(
                                 .padding(8.dp)
                         ) {
                             Text(
-                                text = "Kredensial Sesuai Permintaan: User = admin | Pass = Woyowoyo12@",
+                                text = "Kredensial Keamanan: User = keamanan | Pass = SatpamSRT123@",
                                 fontSize = 11.sp,
                                 color = SipemoAmber,
                                 fontWeight = FontWeight.Medium,
@@ -419,20 +484,20 @@ fun LoginScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(18.dp))
 
                         Button(
-                            onClick = { viewModel.loginAdmin(adminUser, adminPass) },
+                            onClick = { viewModel.loginSecurity(securityUser, securityPass) },
                             colors = ButtonDefaults.buttonColors(containerColor = SipemoAmber),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(50.dp)
-                                .testTag("login_admin_button")
+                                .testTag("login_security_button")
                         ) {
                             Icon(Icons.Default.Key, contentDescription = null, tint = SipemoNavyDark)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Masuk Panel Admin", color = SipemoNavyDark, fontWeight = FontWeight.Bold)
+                            Text("Masuk Pos Keamanan", color = SipemoNavyDark, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

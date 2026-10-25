@@ -22,9 +22,13 @@ object SipemoConstants {
 
     const val ROLE_USER = "USER"
     const val ROLE_ADMIN = "ADMIN"
+    const val ROLE_SECURITY = "SECURITY"
 
     const val ADMIN_USERNAME = "admin"
     const val ADMIN_PASSWORD = "Woyowoyo12@"
+
+    const val SECURITY_USERNAME = "keamanan"
+    const val SECURITY_PASSWORD = "SatpamSRT123@"
 }
 
 @IgnoreExtraProperties
@@ -37,6 +41,7 @@ data class UserProfile(
     val jabatan: String = "Guru",
     val status: String = SipemoConstants.STATUS_PENDING,
     val role: String = SipemoConstants.ROLE_USER,
+    val password: String = "User123@",
     val approvedBy: String = "",
     val rejectionReason: String = "",
     @ServerTimestamp val createdAt: Timestamp? = null,
@@ -71,6 +76,14 @@ data class LoanRequest(
     val driverType: String = "Lepas Kunci", // Lepas Kunci, Dengan Supir
     val status: String = "PENDING", // PENDING, APPROVED, REJECTED, RETURNED
     val notes: String = "",
+    // Security gate approval and live map tracking
+    val securityStatus: String = "MENUNGGU_KELUAR", // MENUNGGU_KELUAR, DI_LUAR, KEMBALI
+    val securityOfficer: String = "",
+    val gateDepartureTime: String = "",
+    val gateReturnTime: String = "",
+    val currentLat: Double = -7.8164, // Kediri base
+    val currentLng: Double = 112.0119,
+    val locationName: String = "Sekolah Rakyat SRT 1 Kediri",
     @ServerTimestamp val createdAt: Timestamp? = null,
     @ServerTimestamp val updatedAt: Timestamp? = null
 )

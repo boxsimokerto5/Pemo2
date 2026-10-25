@@ -24,8 +24,11 @@ import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.HowToReg
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,6 +38,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -53,11 +57,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.SipemoConstants
-import com.example.ui.theme.SipemoAmber
 import com.example.ui.theme.SipemoEmerald
 import com.example.ui.theme.SipemoEmeraldDark
 import com.example.ui.theme.SipemoNavyBorder
@@ -78,6 +83,11 @@ fun RegisterScreen(
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var isPasswordVisible by remember { mutableStateOf(false) }
+    var isConfirmPasswordVisible by remember { mutableStateOf(false) }
+    var localValidationMsg by remember { mutableStateOf<String?>(null) }
 
     // Dropdown states
     var isUnitKerjaExpanded by remember { mutableStateOf(false) }
@@ -98,14 +108,18 @@ fun RegisterScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Back button and header
+            // Header Back Button & Title
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
                     onClick = { viewModel.navigateTo(AppScreen.LOGIN) },
-                    modifier = Modifier.testTag("register_back_button")
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(SipemoNavyCard)
+                        .border(1.dp, SipemoNavyBorder, CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -113,16 +127,18 @@ fun RegisterScreen(
                         tint = Color.White
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+
+                Spacer(modifier = Modifier.width(14.dp))
+
                 Column {
                     Text(
-                        text = "Buat Akun Baru",
-                        fontSize = 22.sp,
+                        text = "Pendaftaran Akun Baru",
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                     Text(
-                        text = "Pendaftaran Pengguna SIPEMO Sekolah Rakyat",
+                        text = "Civitas Sekolah Rakyat SRT 1 Kediri",
                         fontSize = 12.sp,
                         color = SipemoEmerald
                     )
@@ -131,8 +147,9 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Error banner
-            state.errorMessage?.let { errorMsg ->
+            // Error Banner (State error or local validation)
+            val displayedError = state.errorMessage ?: localValidationMsg
+            displayedError?.let { err ->
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -142,20 +159,22 @@ fun RegisterScreen(
                     border = androidx.compose.foundation.BorderStroke(1.dp, SipemoRose)
                 ) {
                     Text(
-                        text = errorMsg,
+                        text = err,
                         color = Color(0xFFFCA5A5),
                         fontSize = 13.sp,
-                        modifier = Modifier.padding(12.dp)
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(12.dp),
+                        textAlign = TextAlign.Center
                     )
                 }
             }
 
-            // Notice Card: Approval Process
+            // Info Card
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
-                color = SipemoAmber.copy(alpha = 0.12f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, SipemoAmber.copy(alpha = 0.4f))
+                color = SipemoNavyCard,
+                border = androidx.compose.foundation.BorderStroke(1.dp, SipemoNavyBorder)
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
@@ -163,29 +182,29 @@ fun RegisterScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
-                            .background(SipemoAmber.copy(alpha = 0.2f)),
+                            .background(SipemoEmerald.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.HowToReg,
                             contentDescription = null,
-                            tint = SipemoAmber,
+                            tint = SipemoEmerald,
                             modifier = Modifier.size(20.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Setelah mengisi formulir, akun Anda akan masuk ke halaman antrean persetujuan Admin Sekolah Rakyat.",
+                        text = "Akun yang Anda daftarkan akan diverifikasi dan disetujui oleh Administrator sebelum dapat digunakan.",
                         fontSize = 12.sp,
-                        color = Color(0xFFFEF3C7),
+                        color = Color(0xFFCBD5E1),
                         lineHeight = 16.sp
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             // Form Card
             Surface(
@@ -201,9 +220,12 @@ fun RegisterScreen(
                     // 1. Nama Lengkap
                     OutlinedTextField(
                         value = fullName,
-                        onValueChange = { fullName = it },
+                        onValueChange = {
+                            fullName = it
+                            localValidationMsg = null
+                        },
                         label = { Text("Nama Lengkap *") },
-                        placeholder = { Text("Contoh: Budi Santoso, S.Pd") },
+                        placeholder = { Text("Contoh: Budi Santoso, S.Pd.") },
                         leadingIcon = {
                             Icon(Icons.Default.Person, contentDescription = null, tint = SipemoEmerald)
                         },
@@ -223,23 +245,21 @@ fun RegisterScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // 2. Unit Kerja Dropdown (SRT 1 KABUPATEN KEDIRI)
+                    // 2. Dropdown Unit Kerja (Fixed: SRT 1 KABUPATEN KEDIRI)
                     ExposedDropdownMenuBox(
                         expanded = isUnitKerjaExpanded,
-                        onExpandedChange = { isUnitKerjaExpanded = it },
+                        onExpandedChange = { isUnitKerjaExpanded = !isUnitKerjaExpanded },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         OutlinedTextField(
                             value = selectedUnitKerja,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Unit Kerja *") },
+                            label = { Text("Unit Kerja") },
                             leadingIcon = {
                                 Icon(Icons.Default.Business, contentDescription = null, tint = SipemoEmerald)
                             },
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = isUnitKerjaExpanded)
-                            },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isUnitKerjaExpanded) },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = SipemoEmerald,
                                 unfocusedBorderColor = SipemoNavyBorder,
@@ -250,7 +270,7 @@ fun RegisterScreen(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .menuAnchor()
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                                 .testTag("unit_kerja_dropdown")
                         )
 
@@ -261,7 +281,7 @@ fun RegisterScreen(
                         ) {
                             SipemoConstants.UNIT_KERJA_LIST.forEach { unit ->
                                 DropdownMenuItem(
-                                    text = { Text(unit, color = Color.White, fontWeight = FontWeight.SemiBold) },
+                                    text = { Text(unit, color = Color.White) },
                                     onClick = {
                                         selectedUnitKerja = unit
                                         isUnitKerjaExpanded = false
@@ -273,10 +293,10 @@ fun RegisterScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // 3. Jabatan Dropdown
+                    // 3. Dropdown Jabatan
                     ExposedDropdownMenuBox(
                         expanded = isJabatanExpanded,
-                        onExpandedChange = { isJabatanExpanded = it },
+                        onExpandedChange = { isJabatanExpanded = !isJabatanExpanded },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         OutlinedTextField(
@@ -287,9 +307,7 @@ fun RegisterScreen(
                             leadingIcon = {
                                 Icon(Icons.Default.Badge, contentDescription = null, tint = SipemoEmerald)
                             },
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = isJabatanExpanded)
-                            },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isJabatanExpanded) },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = SipemoEmerald,
                                 unfocusedBorderColor = SipemoNavyBorder,
@@ -300,7 +318,7 @@ fun RegisterScreen(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .menuAnchor()
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                                 .testTag("jabatan_dropdown")
                         )
 
@@ -326,7 +344,10 @@ fun RegisterScreen(
                     // 4. Email / Username
                     OutlinedTextField(
                         value = email,
-                        onValueChange = { email = it },
+                        onValueChange = {
+                            email = it
+                            localValidationMsg = null
+                        },
                         label = { Text("Email / Username *") },
                         placeholder = { Text("budi@sekolahrakyat.sch.id") },
                         leadingIcon = {
@@ -373,20 +394,107 @@ fun RegisterScreen(
                             .testTag("register_phone_input")
                     )
 
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // 6. Kata Sandi (Password)
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = {
+                            password = it
+                            localValidationMsg = null
+                        },
+                        label = { Text("Kata Sandi (Password) *") },
+                        placeholder = { Text("Minimal 6 karakter") },
+                        leadingIcon = {
+                            Icon(Icons.Default.Lock, contentDescription = null, tint = SipemoEmerald)
+                        },
+                        trailingIcon = {
+                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null,
+                                    tint = Color(0xFF94A3B8)
+                                )
+                            }
+                        },
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = SipemoEmerald,
+                            unfocusedBorderColor = SipemoNavyBorder,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedLabelColor = SipemoEmerald
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("register_password_input")
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // 7. Konfirmasi Kata Sandi
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = {
+                            confirmPassword = it
+                            localValidationMsg = null
+                        },
+                        label = { Text("Ulangi Kata Sandi *") },
+                        placeholder = { Text("Masukkan kata sandi yang sama") },
+                        leadingIcon = {
+                            Icon(Icons.Default.Lock, contentDescription = null, tint = SipemoEmerald)
+                        },
+                        trailingIcon = {
+                            IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isConfirmPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null,
+                                    tint = Color(0xFF94A3B8)
+                                )
+                            }
+                        },
+                        visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = SipemoEmerald,
+                            unfocusedBorderColor = SipemoNavyBorder,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedLabelColor = SipemoEmerald
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("register_confirm_password_input")
+                    )
+
                     Spacer(modifier = Modifier.height(24.dp))
 
                     // Submit Button
                     Button(
                         onClick = {
+                            if (password.length < 6) {
+                                localValidationMsg = "Kata sandi minimal 6 karakter."
+                                return@Button
+                            }
+                            if (password != confirmPassword) {
+                                localValidationMsg = "Konfirmasi kata sandi tidak cocok!"
+                                return@Button
+                            }
                             viewModel.registerUser(
                                 fullName = fullName,
                                 email = email,
                                 phone = phone,
                                 unitKerja = selectedUnitKerja,
-                                jabatan = selectedJabatan
+                                jabatan = selectedJabatan,
+                                password = password
                             )
                         },
-                        enabled = !state.isLoading && fullName.isNotBlank() && email.isNotBlank(),
+                        enabled = !state.isLoading && fullName.isNotBlank() && email.isNotBlank() && password.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(containerColor = SipemoEmerald),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier

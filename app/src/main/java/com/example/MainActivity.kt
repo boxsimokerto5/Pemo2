@@ -17,6 +17,7 @@ import com.example.ui.AdminDashboardScreen
 import com.example.ui.LoginScreen
 import com.example.ui.PendingApprovalScreen
 import com.example.ui.RegisterScreen
+import com.example.ui.SecurityDashboardScreen
 import com.example.ui.UserDashboardScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.AppScreen
@@ -54,6 +55,7 @@ fun SipemoApp(viewModel: SipemoViewModel) {
                 AppScreen.PENDING_APPROVAL -> viewModel.navigateTo(AppScreen.LOGIN)
                 AppScreen.ADMIN_DASHBOARD -> viewModel.logout()
                 AppScreen.USER_DASHBOARD -> viewModel.logout()
+                AppScreen.SECURITY_DASHBOARD -> viewModel.logout()
                 AppScreen.LOGIN -> {}
             }
         }
@@ -74,6 +76,9 @@ fun SipemoApp(viewModel: SipemoViewModel) {
         }
         AppScreen.USER_DASHBOARD -> {
             UserDashboardScreen(state = state, viewModel = viewModel)
+        }
+        AppScreen.SECURITY_DASHBOARD -> {
+            SecurityDashboardScreen(state = state, viewModel = viewModel)
         }
     }
 }
